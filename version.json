@@ -1,7 +1,7 @@
 {
-  "version": "1.2",
-  "versionCode": 3,
+  "version": "1.3",
+  "versionCode": 4,
   "apkUrl": "https://zuixin123123123.github.io/microbio-quiz/update/微生物学做题练习.apk",
   "updateDate": "2026-06-17",
-  "changelog": "移除桌面端键盘快捷键，优化移动端体验"
+  "changelog": "新增答题统计分析功能，支持导出CSV数据"
 }

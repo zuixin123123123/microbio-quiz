@@ -92,6 +92,7 @@ var PASSWORD = 'microbio2026';
 
 var allRows = [];
 var deviceFilter = 'all';
+var sortBy = 'rate';
 
 function renderLogin() {
     document.getElementById('content').innerHTML = ''
@@ -171,7 +172,15 @@ function renderDashboard() {
         var s = qMap[id];
         qList.push({ id: id, attempts: s.attempts, correct: s.correct, rate: Math.round(s.correct / s.attempts * 100), latest: s.latest });
     }
-    qList.sort(function(a, b) { return a.rate - b.rate; });
+    if (sortBy === 'time-desc') {
+        qList.sort(function(a, b) { return (b.latest||'').localeCompare(a.latest||''); });
+    } else if (sortBy === 'time-asc') {
+        qList.sort(function(a, b) { return (a.latest||'').localeCompare(b.latest||''); });
+    } else if (sortBy === 'attempts') {
+        qList.sort(function(a, b) { return b.attempts - a.attempts; });
+    } else {
+        qList.sort(function(a, b) { return a.rate - b.rate; });
+    }
 
     var devStats = {};
     allRows.forEach(function(r) {
@@ -193,6 +202,12 @@ function renderDashboard() {
     html += '<div class="toolbar">'
     + '<button class="accent" onclick="loadDashboard()">刷新数据</button>'
     + '<button onclick="exportCSV()">导出 CSV</button>'
+    + '<select onchange="sortBy=this.value;renderDashboard()">'
+    + '<option value="rate"' + (sortBy==='rate'?' selected':'') + '>按正确率</option>'
+    + '<option value="time-desc"' + (sortBy==='time-desc'?' selected':'') + '>按时间↓</option>'
+    + '<option value="time-asc"' + (sortBy==='time-asc'?' selected':'') + '>按时间↑</option>'
+    + '<option value="attempts"' + (sortBy==='attempts'?' selected':'') + '>按答题次数</option>'
+    + '</select>'
     + '<select onchange="deviceFilter=this.value;renderDashboard()">'
     + '<option value="all">全部设备</option>';
     for (var did in devStats) {

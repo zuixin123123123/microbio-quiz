@@ -93,6 +93,8 @@ var PASSWORD = 'microbio2026';
 var allRows = [];
 var deviceFilter = 'all';
 var sortBy = 'rate';
+var qStems = {};
+var showStems = false;
 
 function renderLogin() {
     document.getElementById('content').innerHTML = ''
@@ -129,9 +131,19 @@ function fetchStats() {
     });
 }
 
+function fetchQuestions() {
+    return fetch('questions.json?_v=3').then(function(r) { return r.json(); }).then(function(qs) {
+        qStems = {};
+        qs.forEach(function(q) { qStems[String(q.id)] = q.stem; });
+    });
+}
+
 function loadDashboard() {
     document.getElementById('content').innerHTML = '<p style="text-align:center;color:#888;padding:40px">加载中...</p>';
-    fetchStats().then(function(rows) {
+    var qPromise = Object.keys(qStems).length > 0 ? Promise.resolve() : fetchQuestions();
+    qPromise.then(function() {
+        return fetchStats();
+    }).then(function(rows) {
         allRows = rows;
         deviceFilter = 'all';
         renderDashboard();
@@ -217,6 +229,7 @@ function renderDashboard() {
         html += '<option value="' + did + '"' + sel + '>设备 ' + did + ' (' + ds.attempts + '题, ' + dr + '%)</option>';
     }
     html += '</select>'
+    + '<button onclick="showStems=!showStems;renderDashboard()">' + (showStems ? '隐藏题干' : '显示题干') + '</button>'
     + '<button onclick="logout()">退出登录</button>'
     + '<span style="margin-left:auto;color:#888;font-size:.8em">自动刷新: 30s</span>'
     + '</div>';
@@ -225,13 +238,15 @@ function renderDashboard() {
         html += '<p style="text-align:center;color:#888;padding:40px">暂无数据</p>';
     } else {
         html += '<table><thead><tr>'
-        + '<th>题号</th><th>答题次数</th><th>正确率</th><th style="min-width:80px">评级</th><th>最近答题</th>'
+        + '<th>题号</th>' + (showStems ? '<th>题干</th>' : '') + '<th>答题次数</th><th>正确率</th><th style="min-width:80px">评级</th><th>最近答题</th>'
         + '</tr></thead><tbody>';
         qList.forEach(function(q) {
             var rateColor = q.rate < 50 ? 'bad' : (q.rate < 80 ? 'ok' : 'good');
             var rateLabel = q.rate < 50 ? '需加强' : (q.rate < 80 ? '一般' : '良好');
+            var stem = qStems[q.id] || '';
             html += '<tr>'
             + '<td><strong>#' + q.id + '</strong></td>'
+            + (showStems ? '<td style="max-width:300px;font-size:.82em" title="' + stem.replace(/"/g,'&quot;') + '">' + stem + '</td>' : '')
             + '<td>' + q.attempts + '</td>'
             + '<td><strong style="color:' + (q.rate < 50 ? '#dc2626' : q.rate < 80 ? '#d97706' : '#059669') + '">' + q.rate + '%</strong></td>'
             + '<td><span class="badge ' + rateColor + '">' + rateLabel + '</span></td>'

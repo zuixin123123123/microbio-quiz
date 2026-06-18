@@ -1,7 +1,7 @@
 {
   "name": "微生物学 · 做题练习",
   "short_name": "微生物学做题",
-  "description": "408道微生物学习题，选择题+判断题，支持章节筛选、错题复习、夜间模式",
+  "description": "1081道微生物学习题，选择+判断+填空+名词解释+问答，支持章节筛选、错题复习、共享笔记",
   "start_url": "index.html",
   "display": "standalone",
   "orientation": "portrait-primary",

@@ -93,10 +93,11 @@ tr:hover td { background: #f8f9ff; }
   <div id="content"></div>
 </div>
 
+<script src="config.js"></script>
 <script>
-var SUPABASE_URL = 'https://owckvahinoewzundfcpv.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Y2t2YWhpbm9ld3p1bmRmY3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2ODAzOTQsImV4cCI6MjA5NzI1NjM5NH0.mNSeY8dpZQD1aqFACY3CcZQV3SS1wOZreKi9zkLxFpg';
-var PASSWORD = 'microbio2026';
+var SUPABASE_URL = window.SUPABASE_URL;
+var SUPABASE_KEY = window.SUPABASE_KEY;
+var PASSWORD = window.PASSWORD;
 
 var allRows = [];
 var deviceFilter = 'all';

@@ -1,5 +1,5 @@
 // Service Worker for 微生物学做题练习 PWA
-var CACHE_NAME = 'microbio-quiz-v1';
+var CACHE_NAME = 'microbio-quiz-v2';
 var urlsToCache = [
   'index.html',
   'manifest.json'

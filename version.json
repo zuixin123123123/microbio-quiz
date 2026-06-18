@@ -1,7 +1,7 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "versionCode": 9,
   "apkUrl": "https://zuixin123123123.github.io/microbio-quiz/update/微生物学做题练习.apk",
   "updateDate": "2026-06-18",
-  "changelog": "新增填空题200题、名词解释119题、问答题88题、选择题141题、判断题125题，题库总计1081题"
+  "changelog": "新增自动下一题、共享笔记、详细统计；题库1081题"
 }

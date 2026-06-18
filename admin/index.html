@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微生物学做题 · 数据后台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: #f0f2f5; color: #1a1a1a; min-height: 100vh;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+
+.header { text-align: center; padding: 28px 0 10px; }
+.header h1 { font-size: 1.4em; margin-bottom: 4px; }
+.header .sub { font-size: .85em; color: #888; }
+
+.login-box {
+  max-width: 360px; margin: 60px auto; background: #fff; border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 32px 28px; text-align: center;
+}
+.login-box input {
+  width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 8px;
+  font-size: 1em; margin: 12px 0; text-align: center; font-family: inherit;
+}
+.login-box input:focus { border-color: #4f46e5; outline: none; }
+.login-box button {
+  width: 100%; padding: 10px; background: #4f46e5; color: #fff; border: none;
+  border-radius: 8px; font-size: 1em; cursor: pointer; font-weight: 600; font-family: inherit;
+}
+.login-box .error { color: #dc2626; font-size: .85em; margin-top: 8px; }
+
+.cards { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+.card-stat {
+  flex: 1; min-width: 110px; background: #fff; border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 18px 20px; text-align: center;
+}
+.card-stat .num { font-size: 2em; font-weight: 800; }
+.card-stat .label { font-size: .82em; color: #888; margin-top: 2px; }
+.card-stat.green .num { color: #059669; }
+.card-stat.blue .num { color: #4f46e5; }
+.card-stat.purple .num { color: #7c3aed; }
+
+.toolbar { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; align-items: center; }
+.toolbar button {
+  padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e5e7eb;
+  background: #fff; cursor: pointer; font-size: .85em; font-family: inherit;
+}
+.toolbar button:hover { border-color: #4f46e5; }
+.toolbar button.accent { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.toolbar select {
+  padding: 8px 12px; border-radius: 8px; border: 1.5px solid #e5e7eb;
+  background: #fff; font-size: .85em; font-family: inherit; cursor: pointer;
+}
+
+table {
+  width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px;
+  overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+th, td { padding: 10px 12px; text-align: left; font-size: .85em; }
+th { background: #f8f9fb; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+td { border-bottom: 1px solid #f3f4f6; }
+tr:hover td { background: #f8f9ff; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: .78em; font-weight: 600;
+}
+.badge.good { background: #ecfdf5; color: #059669; }
+.badge.ok { background: #fffbeb; color: #d97706; }
+.badge.bad { background: #fef2f2; color: #dc2626; }
+.expand-row { cursor: pointer; }
+.expand-row:hover td { background: #f0f0ff; }
+.expand-detail { display: none; background: #fafbff; border-left: 3px solid #4f46e5; }
+.expand-detail.show { display: table-row; }
+.expand-detail td { padding: 8px 16px 12px; font-size: .82em; line-height: 1.7; color: #555; }
+.expand-detail .ans { display: inline-block; padding: 2px 10px; border-radius: 4px; font-weight: 700; margin: 0 4px; }
+.expand-detail .ans.correct { background: #ecfdf5; color: #059669; }
+.expand-detail .ans.wrong { background: #fef2f2; color: #dc2626; }
+
+@media (max-width: 600px) {
+  .container { padding: 12px 8px 60px; }
+  .header h1 { font-size: 1.2em; }
+  th, td { padding: 8px 6px; font-size: .78em; }
+}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="header">
+    <h1>微生物学做题 · 数据后台</h1>
+    <div class="sub">实时查看答题统计数据</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+var SUPABASE_URL = window.SUPABASE_URL;
+var SUPABASE_KEY = window.SUPABASE_KEY;
+var PASSWORD = window.PASSWORD;
+
+var allRows = [];
+var deviceFilter = 'all';
+var typeFilter = 'all';
+var sortBy = 'rate';
+var qStems = {};
+var showStems = false;
+
+function renderLogin() {
+    document.getElementById('content').innerHTML = ''
+    + '<div class="login-box">'
+    + '<h3 style="margin-bottom:12px">管理员登录</h3>'
+    + '<input type="password" id="pwdInput" placeholder="请输入管理密码" onkeydown="if(event.key==\'Enter\')doLogin()">'
+    + '<button onclick="doLogin()">进入后台</button>'
+    + '<div class="error" id="loginError"></div>'
+    + '</div>';
+}
+
+function doLogin() {
+    var pwd = document.getElementById('pwdInput').value;
+    if (pwd === PASSWORD) {
+        sessionStorage.setItem('admin_logged_in', '1');
+        loadDashboard();
+    } else {
+        document.getElementById('loginError').textContent = '密码错误';
+    }
+}
+
+function logout() {
+    sessionStorage.removeItem('admin_logged_in');
+    renderLogin();
+}
+
+function fetchStats() {
+    var url = SUPABASE_URL + '/rest/v1/answer_logs?select=question_id,is_correct,device_id,created_at&order=created_at.desc&limit=5000';
+    return fetch(url, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    }).then(function(resp) {
+        if (!resp.ok) throw new Error('Network error: ' + resp.status);
+        return resp.json();
+    });
+}
+
+function fetchQuestions() {
+    return fetch('questions.json?_v=5').then(function(r) { return r.json(); }).then(function(qs) {
+        qStems = {};
+        qs.forEach(function(q) { qStems[String(q.id)] = q; });
+    });
+}
+
+function loadDashboard() {
+    document.getElementById('content').innerHTML = '<p style="text-align:center;color:#888;padding:40px">加载中...</p>';
+    var qPromise = Object.keys(qStems).length > 0 ? Promise.resolve() : fetchQuestions();
+    qPromise.then(function() {
+        return fetchStats();
+    }).then(function(rows) {
+        allRows = rows;
+        deviceFilter = 'all';
+        renderDashboard();
+    }).catch(function(e) {
+        document.getElementById('content').innerHTML = '<p style="text-align:center;color:#dc2626;padding:40px">加载失败: ' + e.message + '<br><button onclick="loadDashboard()" style="margin-top:12px;padding:8px 20px;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-family:inherit">重试</button></p>';
+    });
+}
+
+function renderDashboard() {
+    var rows = allRows;
+    if (deviceFilter !== 'all') rows = rows.filter(function(r) { return r.device_id === deviceFilter; });
+    if (typeFilter !== 'all') rows = rows.filter(function(r) { var qd = qStems[String(r.question_id)]; return qd && qd.type === typeFilter; });
+
+    var totalAnswers = rows.length;
+    var totalCorrect = rows.filter(function(r) { return r.is_correct; }).length;
+    var overallRate = totalAnswers > 0 ? Math.round(totalCorrect / totalAnswers * 100) : 0;
+
+    var devices = {};
+    allRows.forEach(function(r) { if (r.device_id) devices[r.device_id] = true; });
+    var deviceCount = Object.keys(devices).length;
+
+    var qMap = {};
+    rows.forEach(function(r) {
+        var id = String(r.question_id);
+        if (!qMap[id]) qMap[id] = { attempts: 0, correct: 0, latest: '' };
+        qMap[id].attempts++;
+        if (r.is_correct) qMap[id].correct++;
+        if (r.created_at && r.created_at > qMap[id].latest) qMap[id].latest = r.created_at;
+    });
+
+    function fmtTime(ts) {
+        if (!ts) return '-';
+        var d = new Date(ts);
+        var pad = function(n) { return n < 10 ? '0' + n : n; };
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    var qList = [];
+    for (var id in qMap) {
+        var s = qMap[id];
+        qList.push({ id: id, attempts: s.attempts, correct: s.correct, rate: Math.round(s.correct / s.attempts * 100), latest: s.latest });
+    }
+    if (sortBy === 'time-desc') {
+        qList.sort(function(a, b) { return (b.latest||'').localeCompare(a.latest||''); });
+    } else if (sortBy === 'time-asc') {
+        qList.sort(function(a, b) { return (a.latest||'').localeCompare(b.latest||''); });
+    } else if (sortBy === 'attempts') {
+        qList.sort(function(a, b) { return b.attempts - a.attempts; });
+    } else {
+        qList.sort(function(a, b) { return a.rate - b.rate; });
+    }
+
+    var devStats = {};
+    allRows.forEach(function(r) {
+        var did = r.device_id || 'unknown';
+        if (!devStats[did]) devStats[did] = { attempts: 0, correct: 0 };
+        devStats[did].attempts++;
+        if (r.is_correct) devStats[did].correct++;
+    });
+
+    var html = '';
+
+    var typeNames = {choice:'选择',judge:'判断',fill:'填空',glossary:'名词',qa:'问答'};
+    var typeTotal = {}; var typeCorrect = {};
+    rows.forEach(function(r) {
+        var qd = qStems[String(r.question_id)];
+        var t = qd ? qd.type : 'unknown';
+        if (!typeTotal[t]) { typeTotal[t] = 0; typeCorrect[t] = 0; }
+        typeTotal[t]++;
+        if (r.is_correct) typeCorrect[t]++;
+    });
+
+    var typeCards = '';
+    for (var t in typeTotal) {
+        var tr = Math.round((typeCorrect[t]||0) / typeTotal[t] * 100);
+        typeCards += '<div class="card-stat" style="min-width:70px;padding:12px 14px"><div class="num" style="font-size:1.3em">' + tr + '%</div><div class="label" style="font-size:.72em">' + (typeNames[t]||t) + '(' + typeTotal[t] + ')</div></div>';
+    }
+
+    html += '<div class="cards">'
+    + '<div class="card-stat blue"><div class="num">' + totalAnswers + '</div><div class="label">总答题次数</div></div>'
+    + '<div class="card-stat green"><div class="num">' + overallRate + '%</div><div class="label">总正确率</div></div>'
+    + '<div class="card-stat purple"><div class="num">' + qList.length + '</div><div class="label">涉及题目</div></div>'
+    + '<div class="card-stat blue"><div class="num">' + deviceCount + '</div><div class="label">设备数</div></div>'
+    + '</div>'
+    + '<div class="cards" style="margin-top:4px">' + typeCards + '</div>';
+
+    html += '<div class="toolbar">'
+    + '<button class="accent" onclick="loadDashboard()">刷新数据</button>'
+    + '<button onclick="exportCSV()">导出 CSV</button>'
+    + '<select onchange="typeFilter=this.value;renderDashboard()">'
+    + '<option value="all"' + (typeFilter==='all'?' selected':'') + '>全部题型</option>'
+    + '<option value="choice"' + (typeFilter==='choice'?' selected':'') + '>选择题</option>'
+    + '<option value="judge"' + (typeFilter==='judge'?' selected':'') + '>判断题</option>'
+    + '<option value="fill"' + (typeFilter==='fill'?' selected':'') + '>填空题</option>'
+    + '<option value="glossary"' + (typeFilter==='glossary'?' selected':'') + '>名词解释</option>'
+    + '<option value="qa"' + (typeFilter==='qa'?' selected':'') + '>问答题</option>'
+    + '</select>'
+    + '<select onchange="sortBy=this.value;renderDashboard()">'
+    + '<option value="rate"' + (sortBy==='rate'?' selected':'') + '>按正确率</option>'
+    + '<option value="time-desc"' + (sortBy==='time-desc'?' selected':'') + '>按时间↓</option>'
+    + '<option value="time-asc"' + (sortBy==='time-asc'?' selected':'') + '>按时间↑</option>'
+    + '<option value="attempts"' + (sortBy==='attempts'?' selected':'') + '>按答题次数</option>'
+    + '</select>'
+    + '<select onchange="deviceFilter=this.value;renderDashboard()">'
+    + '<option value="all">全部设备</option>';
+    for (var did in devStats) {
+        var ds = devStats[did];
+        var sel = deviceFilter === did ? ' selected' : '';
+        var dr = Math.round(ds.correct / ds.attempts * 100);
+        html += '<option value="' + did + '"' + sel + '>设备 ' + did + ' (' + ds.attempts + '题, ' + dr + '%)</option>';
+    }
+    html += '</select>'
+    + '<button onclick="showStems=!showStems;renderDashboard()">' + (showStems ? '隐藏题干' : '显示题干') + '</button>'
+    + '<button onclick="logout()">退出登录</button>'
+    + '<span style="margin-left:auto;color:#888;font-size:.8em">自动刷新: 30s</span>'
+    + '</div>';
+
+    if (qList.length === 0) {
+        html += '<p style="text-align:center;color:#888;padding:40px">暂无数据</p>';
+    } else {
+        html += '<table><thead><tr>'
+        + '<th>题号</th>' + (showStems ? '<th>题干</th>' : '') + '<th>答题次数</th><th>正确率</th><th style="min-width:80px">评级</th><th>最近答题</th>'
+        + '</tr></thead><tbody>';
+        qList.forEach(function(q) {
+            var rateColor = q.rate < 50 ? 'bad' : (q.rate < 80 ? 'ok' : 'good');
+            var rateLabel = q.rate < 50 ? '需加强' : (q.rate < 80 ? '一般' : '良好');
+            var qd = qStems[q.id];
+            var stem = qd ? qd.stem : '';
+            var shortStem = stem.length > 25 ? stem.substring(0, 25) + '…' : stem;
+            var answer = qd ? qd.answer : '';
+            var expl = qd ? qd.explanation || '' : '';
+            var typeNames = {choice:'选择题',judge:'判断题',fill:'填空题',glossary:'名词解释',qa:'问答题'};
+            var typeTagStyles = {choice:'#ede9fe;#7c3aed',judge:'#fce7f3;#db2777',fill:'#ecfdf5;#059669',glossary:'#fef3c7;#d97706',qa:'#ede9fe;#7c3aed'};
+            var tts = (typeTagStyles[qd ? qd.type : ''] || '#eee;#888').split(';');
+            html += '<tr class="expand-row" onclick="var d=this.nextElementSibling;d.classList.toggle(\'show\')">'
+            + '<td><strong>#' + q.id + '</strong>' + (qd && qd.type ? ' <span style="display:inline-block;padding:0 5px;border-radius:6px;font-size:.65em;background:' + tts[0] + ';color:' + tts[1] + '">' + (typeNames[qd.type]||'') + '</span>' : '') + '</td>'
+            + (showStems ? '<td style="font-size:.82em">' + shortStem + ' <span style="color:#4f46e5;font-size:0.75em">展开▼</span></td>' : '')
+            + '<td>' + q.attempts + '</td>'
+            + '<td><strong style="color:' + (q.rate < 50 ? '#dc2626' : q.rate < 80 ? '#d97706' : '#059669') + '">' + q.rate + '%</strong></td>'
+            + '<td><span class="badge ' + rateColor + '">' + rateLabel + '</span></td>'
+            + '<td style="color:#888;font-size:.8em">' + fmtTime(q.latest) + '</td>'
+            + '</tr>';
+            if (showStems && stem) {
+                var typeNames = {choice:'选择题',judge:'判断题',fill:'填空题',glossary:'名词解释',qa:'问答题'};
+                var typeName = typeNames[qd.type] || '';
+                html += '<tr class="expand-detail"><td colspan="6">'
+                + (typeName ? '<div style="margin-bottom:4px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:.75em;background:#ede9fe;color:#7c3aed">' + typeName + '</span></div>' : '')
+                + '<div><strong>题干：</strong>' + stem + '</div>'
+                + '<div style="margin-top:4px"><strong>答案：</strong><span class="ans ' + (answer === '√' ? 'correct' : (answer === '×' ? 'wrong' : 'correct')) + '">' + answer + '</span></div>'
+                + (expl ? '<div style="margin-top:4px;color:#888">' + expl + '</div>' : '')
+                + '</td></tr>';
+            }
+        });
+        html += '</tbody></table>';
+    }
+
+    document.getElementById('content').innerHTML = html;
+
+    if (window._refreshTimer) clearTimeout(window._refreshTimer);
+    window._refreshTimer = setTimeout(loadDashboard, 30000);
+}
+
+function exportCSV() {
+    var rows = allRows;
+    if (deviceFilter !== 'all') rows = rows.filter(function(r) { return r.device_id === deviceFilter; });
+    if (typeFilter !== 'all') rows = rows.filter(function(r) { var qd = qStems[String(r.question_id)]; return qd && qd.type === typeFilter; });
+    var qMap = {};
+    rows.forEach(function(r) {
+        var id = String(r.question_id);
+        if (!qMap[id]) qMap[id] = { attempts: 0, correct: 0, latest: '' };
+        qMap[id].attempts++;
+        if (r.is_correct) qMap[id].correct++;
+        if (r.created_at && r.created_at > qMap[id].latest) qMap[id].latest = r.created_at;
+    });
+    var csv = '题号,答题次数,正确次数,正确率,最近答题\n';
+    for (var id in qMap) {
+        var s = qMap[id];
+        csv += id + ',' + s.attempts + ',' + s.correct + ',' + Math.round(s.correct / s.attempts * 100) + '%,' + fmtTime(s.latest) + '\n';
+    }
+    navigator.clipboard.writeText(csv).then(function() {
+        alert('已复制到剪贴板！');
+    }).catch(function() {
+        var ta = document.createElement('textarea');
+        ta.value = csv;
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('已复制到剪贴板！');
+    });
+}
+
+if (sessionStorage.getItem('admin_logged_in') === '1') {
+    loadDashboard();
+} else {
+    renderLogin();
+}
+</script>
+</body>
+</html>
